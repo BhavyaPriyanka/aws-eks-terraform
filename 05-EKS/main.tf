@@ -11,7 +11,7 @@ module "eks" {
   version = "~> 20.0"
   #cluster_service_ipv4_cidr = var.cluster_service_ipv4_cidr
   cluster_name    = "${var.project_name}-${var.environment}"
-  cluster_version = "1.33"
+  cluster_version = "1.32"
   # it should be false in PROD environments
   cluster_endpoint_public_access = true
 
@@ -61,6 +61,7 @@ module "eks" {
       min_size      = 2
       max_size      = 10
       desired_size  = 2
+      version = "1.32"
       capacity_type = "SPOT"
       iam_role_additional_policies = {
         AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
@@ -74,6 +75,7 @@ module "eks" {
     #   min_size      = 2
     #   max_size      = 10
     #   desired_size  = 2
+   # version = "1.32"
     #   capacity_type = "SPOT"
     #   iam_role_additional_policies = {
     #     AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"

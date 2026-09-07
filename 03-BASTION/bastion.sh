@@ -1,17 +1,22 @@
 #!/bin/bash
+
 set -e
+
 USERID=$(id -u)
 TIMESTAMP=$(date +%F-%H-%M-%S)
-SCRIPT_NAME=$(echo $0 | cut -d "." -f1)
-LOGFILE=/tmp/$SCRIPT_NAME-$TIMESTAMP.log
+SCRIPT_NAME=$(basename "$0" .sh)
+LOGFILE="/tmp/${SCRIPT_NAME}-${TIMESTAMP}.log"
+
 R="\e[31m"
 G="\e[32m"
 Y="\e[33m"
 N="\e[0m"
 
-VALIDATE(){
-   if [ $1 -ne 0 ]
-   then
+# Send output to both screen and logfile
+exec > >(tee -a "$LOGFILE") 2>&1
+
+VALIDATE() {
+    if [ "$1" -ne 0 ]; then
         echo -e "$2...$R FAILURE $N"
         exit 1
     else
@@ -19,45 +24,167 @@ VALIDATE(){
     fi
 }
 
-if [ $USERID -ne 0 ]
-then
+if [ "$USERID" -ne 0 ]; then
     echo "Please run this script with root access."
-    exit 1 # manually exit if error comes.
+    exit 1
 else
     echo "You are super user."
 fi
 
-# docker
-yum install -y yum-utils
-yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-systemctl start docker
-systemctl enable docker
-usermod -aG docker ec2-user
+echo "========================================="
+echo " Bastion Host Setup"
+echo " Amazon Linux 2023"
+echo "========================================="
+
+
+# ---------------------------------------------------------
+# System update
+# ---------------------------------------------------------
+
+dnf update -y
+VALIDATE $? "System update"
+
+
+# ---------------------------------------------------------
+# Basic packages
+# ---------------------------------------------------------
+
+dnf install -y \
+    wget \
+    unzip \
+    tar \
+    gzip \
+    git \
+    jq \
+    mariadb105
+
+VALIDATE $? "Basic packages installation"
+
+
+# ---------------------------------------------------------
+# Docker
+# ---------------------------------------------------------
+
+dnf install -y docker
 VALIDATE $? "Docker installation"
 
-# eksctl
-curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-mv /tmp/eksctl /usr/local/bin
-eksctl version
-VALIDATE $? "eksctl installation"
+systemctl enable --now docker
 
+usermod -aG docker ec2-user
+
+echo -e "Docker setup...$G SUCCESS $N"
+
+
+# ---------------------------------------------------------
 # kubectl
-curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.30.0/2024-05-12/bin/linux/amd64/kubectl
-chmod +x ./kubectl
-mv kubectl /usr/local/bin/kubectl
+# EKS Kubernetes version = 1.32
+# ---------------------------------------------------------
+
+KUBECTL_VERSION="v1.32.13"
+
+curl -Lo /usr/local/bin/kubectl \
+    "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+
+chmod +x /usr/local/bin/kubectl
+
+kubectl version --client
+
 VALIDATE $? "kubectl installation"
 
+
+# ---------------------------------------------------------
+# eksctl
+# ---------------------------------------------------------
+
+ARCH=amd64
+PLATFORM=$(uname -s)_$ARCH
+
+curl --silent --location \
+    "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_${PLATFORM}.tar.gz" \
+    | tar xz -C /tmp
+
+mv /tmp/eksctl /usr/local/bin/eksctl
+
+eksctl version
+
+VALIDATE $? "eksctl installation"
+
+
+# ---------------------------------------------------------
 # Helm
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-VALIDATE $? "helm installation"
+# ---------------------------------------------------------
 
-dnf install mysql -y
-VALIDATE $? "MySQL installation"
+curl -fsSL \
+    -o /tmp/get_helm.sh \
+    https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
 
-#kubens
-git clone https://github.com/ahmetb/kubectx /opt/kubectx
-ln -s /opt/kubectx/kubens /usr/local/bin/kubens
-VALIDATE $? "kubens installation"
+chmod 700 /tmp/get_helm.sh
+
+/tmp/get_helm.sh
+
+helm version
+
+VALIDATE $? "Helm installation"
+
+
+# ---------------------------------------------------------
+# kubectx / kubens
+# ---------------------------------------------------------
+
+rm -rf /opt/kubectx
+
+git clone \
+    https://github.com/ahmetb/kubectx \
+    /opt/kubectx
+
+ln -sf /opt/kubectx/kubens /usr/local/bin/kubens
+ln -sf /opt/kubectx/kubectx /usr/local/bin/kubectx
+
+kubens --help >/dev/null
+kubectx --help >/dev/null
+
+VALIDATE $? "kubectx and kubens installation"
+
+
+# ---------------------------------------------------------
+# Final verification
+# ---------------------------------------------------------
+
+echo
+echo "========================================="
+echo " Installation Summary"
+echo "========================================="
+
+echo
+echo "AWS CLI:"
+aws --version
+
+echo
+echo "kubectl:"
+kubectl version --client
+
+echo
+echo "eksctl:"
+eksctl version
+
+echo
+echo "Helm:"
+helm version
+
+echo
+echo "MySQL:"
+mysql --version
+
+echo
+echo "Docker:"
+docker --version
+
+echo
+echo "kubens:"
+kubens --help | head -5
+
+echo
+echo "========================================="
+echo -e "$G Bastion setup completed successfully $N"
+echo "Log file: $LOGFILE"
+echo "========================================="

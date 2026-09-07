@@ -2,8 +2,8 @@ resource "aws_lb" "ingress_alb" {
   name               = "${var.project_name}-${var.environment}-ingress-alb"
   internal           = false 
   load_balancer_type = "application"
-  security_groups    = [data.aws_ssm_parameter.app_alb_sg_id.value]
-  subnets            = split(",",data.aws_ssm_parameter.private_subnet_ids.value)
+  security_groups    = [data.aws_ssm_parameter.ingress_sg_id.value]
+  subnets            = split(",",data.aws_ssm_parameter.public_subnet_ids.value)
 
   enable_deletion_protection = false
 

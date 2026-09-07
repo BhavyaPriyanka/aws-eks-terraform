@@ -7,13 +7,13 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "localhelp-remote-state"
+    bucket         = "localhelp-remote-tfstate"
     key            = "localhelp-dev-sg"
-    region         = "ap-south-1"
+    region         = "us-east-1"
     dynamodb_table = "localhelp-locking"
   }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "us-east-1"
 }

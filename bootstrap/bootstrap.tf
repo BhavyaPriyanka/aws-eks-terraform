@@ -8,11 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-1"
+  region = "us-east-1"
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "localhelp-remote-state"
+  bucket = "localhelp-remote-tfstate"
   force_destroy = false
 }
 

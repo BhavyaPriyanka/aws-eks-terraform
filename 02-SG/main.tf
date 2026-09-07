@@ -1,5 +1,5 @@
 module "db" {
-  source = "https://github.com/BhavyaPriyanka/terraform-aws-securitygroup"
+  source = "git::https://github.com/BhavyaPriyanka/terraform-aws-securitygroup.git?ref=main"
   project_name = var.project_name
   environment = var.environment
   sg_description = "SG for DB MySQL Instances"
@@ -39,7 +39,7 @@ module "node" {
 }
 
 module "bastion" {
-  source = "https://github.com/BhavyaPriyanka/terraform-aws-securitygroup"
+ source = "git::https://github.com/BhavyaPriyanka/terraform-aws-securitygroup.git?ref=main"
   project_name = var.project_name
   environment = var.environment
   sg_description = "SG for Bastion Instances"
@@ -49,14 +49,14 @@ module "bastion" {
 }
 
 module "vpn" {
-  source = "https://github.com/BhavyaPriyanka/terraform-aws-securitygroup"
+  source = "git::https://github.com/BhavyaPriyanka/terraform-aws-securitygroup.git?ref=main"
   project_name = var.project_name
   environment = var.environment
   sg_description = "SG for VPN Instances"
   vpc_id = data.aws_ssm_parameter.vpc_id.value
   common_tags = var.common_tags
   sg_name = "vpn"
-  ingress_rules = var.vpn_sg_rules
+  ingress_rule = var.vpn_sg_rules
 }
 
 resource "aws_security_group_rule" "bastion_public" {

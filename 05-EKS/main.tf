@@ -166,10 +166,12 @@ module "cluster_autoscaler_irsa_role" {
 # ---------------------------------------------------------
 
 resource "helm_release" "cluster_autoscaler" {
-  name      = "cluster-autoscaler"
-  namespace = "kube-system"
+  name       = "cluster-autoscaler"
+  namespace  = "kube-system"
 
-  chart = "${path.module}/cluster-autoscaler-9.59.0.tgz"
+  repository = "https://kubernetes.github.io/autoscaler"
+  chart      = "cluster-autoscaler"
+  version    = "9.59.0"
 
   set = [
     {

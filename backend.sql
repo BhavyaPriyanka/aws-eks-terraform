@@ -9,6 +9,10 @@ UPDATE users
 SET password='USER_HASH_HERE'
 WHERE username='user';
 
+CREATE USER 'appuser'@'%' IDENTIFIED BY 'localhelp';
+GRANT ALL PRIVILEGES ON appdb.* TO 'appuser'@'%';
+FLUSH PRIVILEGES;
+
 -- =========================
 -- USERS
 -- =========================

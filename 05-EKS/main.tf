@@ -1,19 +1,19 @@
 resource "aws_key_pair" "eks" {
   key_name = "eks"
-  # you can paste the public key directly like this
-  #public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL6ONJth+DzeXbU3oGATxjVmoRjPepdl7sBuPzzQT2Nc sivak@BOOK-I6CR3LQ85Q"
+
   public_key = file("~/.ssh/eks.pub")
-  # ~ means windows home directory
 }
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
-  #cluster_service_ipv4_cidr = var.cluster_service_ipv4_cidr
+
   cluster_name    = "${var.project_name}-${var.environment}"
   cluster_version = "1.32"
-  # it should be false in PROD environments
+
   cluster_endpoint_public_access = true
+
+  authentication_mode = "API_AND_CONFIG_MAP"
 
   vpc_id                   = local.vpc_id
   subnet_ids               = split(",", local.private_subnet_ids)
@@ -23,10 +23,14 @@ module "eks" {
   cluster_security_group_id     = local.cluster_sg_id
 
   create_node_security_group = false
-  node_security_group_id     = local.node_sg_id
+  node_security_group_id      = local.node_sg_id
 
-  # the user which you used to create cluster will get admin access
+  # Cluster creator gets admin access
   enable_cluster_creator_admin_permissions = true
+
+  # -------------------------------------------------------
+  # Bastion EKS Access
+  # -------------------------------------------------------
 
   access_entries = {
     bastion = {
@@ -44,16 +48,28 @@ module "eks" {
     }
   }
 
+  # -------------------------------------------------------
+  # EKS Addons
+  # -------------------------------------------------------
+
   cluster_addons = {
     coredns                = {}
     eks-pod-identity-agent = {}
     kube-proxy             = {}
-    vpc-cni                = {}
+    vpc-cni                 = {}
   }
 
-  # EKS Managed Node Group(s)
+  # -------------------------------------------------------
+  # Managed Node Group
+  # -------------------------------------------------------
+
   eks_managed_node_group_defaults = {
-    instance_types = ["m6i.large", "m5.large", "m5n.large", "m5zn.large"]
+    instance_types = [
+      "m6i.large",
+      "m5.large",
+      "m5n.large",
+      "m5zn.large"
+    ]
   }
 
   eks_managed_node_groups = {
@@ -61,47 +77,40 @@ module "eks" {
       min_size      = 2
       max_size      = 10
       desired_size  = 2
-      version = "1.32"
+      version       = "1.32"
       capacity_type = "SPOT"
+
       iam_role_additional_policies = {
-        AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+
         AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/AmazonElasticFileSystemFullAccess"
-        ElasticLoadBalancingFullAccess    = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
+
+        ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
       }
-      # EKS takes AWS Linux 2 as it's OS to the nodes
+
       key_name = aws_key_pair.eks.key_name
     }
-    # green = {
-    #   min_size      = 2
-    #   max_size      = 10
-    #   desired_size  = 2
-   # version = "1.32"
-    #   capacity_type = "SPOT"
-    #   iam_role_additional_policies = {
-    #     AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-    #     AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/AmazonElasticFileSystemFullAccess"
-    #     ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
-    #   }
-    #   # EKS takes AWS Linux 2 as it's OS to the nodes
-    #   key_name = aws_key_pair.eks.key_name
-    # }
   }
 
   tags = var.common_tags
 }
 
-# ---------------------------------------------------------
+
+# =========================================================
 # Cluster Autoscaler IAM Policy
-# ---------------------------------------------------------
+# =========================================================
 
 resource "aws_iam_policy" "cluster_autoscaler" {
-  name        = "${var.project_name}-${var.environment}-cluster-autoscaler"
+
+  name = "${var.project_name}-${var.environment}-cluster-autoscaler"
+
   description = "Permissions for Kubernetes Cluster Autoscaler"
 
   policy = jsonencode({
     Version = "2012-10-17"
 
     Statement = [
+
       {
         Effect = "Allow"
 
@@ -135,12 +144,14 @@ resource "aws_iam_policy" "cluster_autoscaler" {
 }
 
 
-# ---------------------------------------------------------
-# IAM Role for Cluster Autoscaler
-# ---------------------------------------------------------
+# =========================================================
+# Cluster Autoscaler IAM Role
+# =========================================================
 
 module "cluster_autoscaler_irsa_role" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
   version = "~> 5.0"
 
   role_name = "${var.project_name}-${var.environment}-cluster-autoscaler"
@@ -150,7 +161,9 @@ module "cluster_autoscaler_irsa_role" {
   }
 
   oidc_providers = {
+
     main = {
+
       provider_arn = module.eks.oidc_provider_arn
 
       namespace_service_accounts = [
@@ -161,35 +174,42 @@ module "cluster_autoscaler_irsa_role" {
 }
 
 
-# ---------------------------------------------------------
-# Cluster Autoscaler Helm Chart
-# ---------------------------------------------------------
+# =========================================================
+# Cluster Autoscaler Helm Release
+# =========================================================
 
 resource "helm_release" "cluster_autoscaler" {
-  name       = "cluster-autoscaler"
-  namespace  = "kube-system"
+
+  name      = "cluster-autoscaler"
+  namespace = "kube-system"
 
   repository = "https://kubernetes.github.io/autoscaler"
-  chart      = "cluster-autoscaler"
-  version    = "9.59.0"
+
+  chart   = "cluster-autoscaler"
+  version = "9.59.0"
 
   set = [
+
     {
       name  = "autoDiscovery.clusterName"
       value = "${var.project_name}-${var.environment}"
     },
+
     {
       name  = "awsRegion"
       value = "us-east-1"
     },
+
     {
       name  = "rbac.serviceAccount.create"
       value = "true"
     },
+
     {
       name  = "rbac.serviceAccount.name"
       value = "cluster-autoscaler"
     },
+
     {
       name  = "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
       value = module.cluster_autoscaler_irsa_role.iam_role_arn
@@ -199,4 +219,35 @@ resource "helm_release" "cluster_autoscaler" {
   depends_on = [
     module.eks
   ]
+}
+
+resource "aws_iam_policy" "bastion_eks_access" {
+  name        = "${var.project_name}-${var.environment}-bastion-eks-access"
+  description = "EKS API permissions for Bastion"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "eks:DescribeCluster",
+          "eks:ListClusters",
+          "eks:DescribeAccessEntry",
+          "eks:ListAccessEntries",
+          "eks:ListAssociatedAccessPolicies",
+          "eks:AccessKubernetesApi"
+        ]
+
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "bastion_eks_access" {
+  role       = data.aws_iam_role.bastion.name
+  policy_arn = aws_iam_policy.bastion_eks_access.arn
 }

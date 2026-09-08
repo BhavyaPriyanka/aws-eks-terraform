@@ -19,3 +19,7 @@ data "aws_ssm_parameter" "private_subnet_ids" {
 data "aws_vpc" "default" {
   default = true
 }
+
+data "aws_iam_role" "bastion" {
+  name = "${var.project_name}-${var.environment}-bastion-role"
+}

@@ -72,25 +72,101 @@ module "eks" {
     ]
   }
 
-  eks_managed_node_groups = {
-    blue = {
-      min_size      = 2
-      max_size      = 10
-      desired_size  = 2
-      version       = "1.32"
-      capacity_type = "SPOT"
+ eks_managed_node_groups = {
 
-      iam_role_additional_policies = {
-        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  frontend = {
+    min_size     = 1
+    max_size     = 5
+    desired_size = 2
 
-        AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/AmazonElasticFileSystemFullAccess"
+    instance_types = ["m6i.large"]
+    capacity_type  = "ON_DEMAND"
+    version        = "1.32"
 
-        ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess"
-      }
+    key_name = aws_key_pair.eks.key_name
 
-      key_name = aws_key_pair.eks.key_name
+    labels = {
+      workload = "frontend"
+    }
+
+    iam_role_additional_policies = {
+      AmazonEBSCSIDriverPolicy =
+        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+
+      ElasticLoadBalancingFullAccess =
+        "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
     }
   }
+
+  backend = {
+    min_size     = 1
+    max_size     = 5
+    desired_size = 2
+
+    instance_types = ["m6i.large"]
+    capacity_type  = "ON_DEMAND"
+    version        = "1.32"
+
+    key_name = aws_key_pair.eks.key_name
+
+    labels = {
+      workload = "backend"
+    }
+
+    iam_role_additional_policies = {
+      AmazonEBSCSIDriverPolicy =
+        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+
+      ElasticLoadBalancingFullAccess =
+        "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
+    }
+  }
+
+  database = {
+    min_size     = 1
+    max_size     = 3
+    desired_size = 1
+
+    instance_types = ["m6i.large"]
+    capacity_type  = "ON_DEMAND"
+    version        = "1.32"
+
+    key_name = aws_key_pair.eks.key_name
+
+    labels = {
+      workload = "database"
+    }
+
+    iam_role_additional_policies = {
+      AmazonEBSCSIDriverPolicy =
+        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+
+      AmazonElasticFileSystemFullAccess =
+        "arn:aws:iam::aws:policy/service-role/AmazonElasticFileSystemFullAccess"
+    }
+  }
+
+  monitoring = {
+    min_size     = 1
+    max_size     = 3
+    desired_size = 1
+
+    instance_types = ["m6i.large"]
+    capacity_type  = "ON_DEMAND"
+    version        = "1.32"
+
+    key_name = aws_key_pair.eks.key_name
+
+    labels = {
+      workload = "monitoring"
+    }
+
+    iam_role_additional_policies = {
+      AmazonEBSCSIDriverPolicy =
+        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+    }
+  }
+}
 
   tags = var.common_tags
 }

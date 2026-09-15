@@ -1,6 +1,5 @@
 resource "aws_key_pair" "eks" {
-  key_name = "eks"
-
+  key_name   = "eks"
   public_key = file("~/.ssh/eks.pub")
 }
 
@@ -12,6 +11,7 @@ module "eks" {
   cluster_version = "1.32"
 
   cluster_endpoint_public_access = true
+  cluster_endpoint_private_access = false
 
   authentication_mode = "API_AND_CONFIG_MAP"
 
@@ -23,7 +23,7 @@ module "eks" {
   cluster_security_group_id     = local.cluster_sg_id
 
   create_node_security_group = false
-  node_security_group_id      = local.node_sg_id
+  node_security_group_id     = local.node_sg_id
 
   # Cluster creator gets admin access
   enable_cluster_creator_admin_permissions = true
@@ -56,121 +56,110 @@ module "eks" {
     coredns                = {}
     eks-pod-identity-agent = {}
     kube-proxy             = {}
-    vpc-cni                 = {}
+    vpc-cni                = {}
   }
 
   # -------------------------------------------------------
-  # Managed Node Group
+  # Managed Node Group Defaults
   # -------------------------------------------------------
 
   eks_managed_node_group_defaults = {
-    instance_types = [
-      "m6i.large",
-      "m5.large",
-      "m5n.large",
-      "m5zn.large"
-    ]
+    instance_types = ["t3.medium"]
   }
 
- eks_managed_node_groups = {
+  # -------------------------------------------------------
+  # Managed Node Groups
+  # -------------------------------------------------------
 
-  frontend = {
-    min_size     = 1
-    max_size     = 5
-    desired_size = 2
+  eks_managed_node_groups = {
 
-    instance_types = ["m6i.large"]
-    capacity_type  = "ON_DEMAND"
-    version        = "1.32"
+    frontend = {
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
 
-    key_name = aws_key_pair.eks.key_name
+      instance_types = ["t3.medium"]
+      capacity_type  = "ON_DEMAND"
+      version        = "1.32"
 
-    labels = {
-      workload = "frontend"
+      key_name = aws_key_pair.eks.key_name
+
+      labels = {
+        workload = "frontend"
+      }
+
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy       = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        # ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
+      }
     }
 
-    iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy =
-        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+    backend = {
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
 
-      ElasticLoadBalancingFullAccess =
-        "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
+      instance_types = ["t3.medium"]
+      capacity_type  = "ON_DEMAND"
+      version        = "1.32"
+
+      key_name = aws_key_pair.eks.key_name
+
+      labels = {
+        workload = "backend"
+      }
+
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy       = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        # ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
+      }
     }
+
+#     database = {
+#       min_size     = 1
+#       max_size     = 3
+#       desired_size = 1
+
+#       instance_types = ["m6i.large"]
+#       capacity_type  = "ON_DEMAND"
+#       version        = "1.32"
+
+#       key_name = aws_key_pair.eks.key_name
+
+#       labels = {
+#         workload = "database"
+#       }
+
+#       iam_role_additional_policies = {
+#         AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+#         # AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/service-role/AmazonElasticFileSystemFullAccess"
+#       }
+#     }
+
+#     monitoring = {
+#       min_size     = 1
+#       max_size     = 3
+#       desired_size = 1
+
+#       instance_types = ["m6i.large"]
+#       capacity_type  = "ON_DEMAND"
+#       version        = "1.32"
+
+#       key_name = aws_key_pair.eks.key_name
+
+#       labels = {
+#         workload = "monitoring"
+#       }
+
+#       iam_role_additional_policies = {
+#         AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+#       }
+#     }
+#   }
   }
-
-  backend = {
-    min_size     = 1
-    max_size     = 5
-    desired_size = 2
-
-    instance_types = ["m6i.large"]
-    capacity_type  = "ON_DEMAND"
-    version        = "1.32"
-
-    key_name = aws_key_pair.eks.key_name
-
-    labels = {
-      workload = "backend"
-    }
-
-    iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy =
-        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-
-      ElasticLoadBalancingFullAccess =
-        "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
-    }
-  }
-
-  database = {
-    min_size     = 1
-    max_size     = 3
-    desired_size = 1
-
-    instance_types = ["m6i.large"]
-    capacity_type  = "ON_DEMAND"
-    version        = "1.32"
-
-    key_name = aws_key_pair.eks.key_name
-
-    labels = {
-      workload = "database"
-    }
-
-    iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy =
-        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-
-      AmazonElasticFileSystemFullAccess =
-        "arn:aws:iam::aws:policy/service-role/AmazonElasticFileSystemFullAccess"
-    }
-  }
-
-  monitoring = {
-    min_size     = 1
-    max_size     = 3
-    desired_size = 1
-
-    instance_types = ["m6i.large"]
-    capacity_type  = "ON_DEMAND"
-    version        = "1.32"
-
-    key_name = aws_key_pair.eks.key_name
-
-    labels = {
-      workload = "monitoring"
-    }
-
-    iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy =
-        "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-    }
-  }
-}
-
   tags = var.common_tags
-}
 
+}
 
 # =========================================================
 # Cluster Autoscaler IAM Policy
@@ -297,7 +286,13 @@ resource "helm_release" "cluster_autoscaler" {
   ]
 }
 
+
+# =========================================================
+# Bastion EKS Access Policy
+# =========================================================
+
 resource "aws_iam_policy" "bastion_eks_access" {
+
   name        = "${var.project_name}-${var.environment}-bastion-eks-access"
   description = "EKS API permissions for Bastion"
 
@@ -323,7 +318,9 @@ resource "aws_iam_policy" "bastion_eks_access" {
   })
 }
 
+
 resource "aws_iam_role_policy_attachment" "bastion_eks_access" {
+
   role       = data.aws_iam_role.bastion.name
   policy_arn = aws_iam_policy.bastion_eks_access.arn
 }

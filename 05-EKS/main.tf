@@ -64,7 +64,7 @@ module "eks" {
   # -------------------------------------------------------
 
   eks_managed_node_group_defaults = {
-    instance_types = ["t3.medium"]
+    instance_types = ["t3.small"]
   }
 
   # -------------------------------------------------------
@@ -78,8 +78,8 @@ module "eks" {
       max_size     = 2
       desired_size = 1
 
-      instance_types = ["t3.medium"]
-      capacity_type  = "ON_DEMAND"
+      instance_types = ["t3.small"]
+      capacity_type  = "SPOT"
       version        = "1.32"
 
       key_name = aws_key_pair.eks.key_name
@@ -99,8 +99,8 @@ module "eks" {
       max_size     = 2
       desired_size = 1
 
-      instance_types = ["t3.medium"]
-      capacity_type  = "ON_DEMAND"
+      instance_types = ["t3.small"]
+      capacity_type  = "SPOT"
       version        = "1.32"
 
       key_name = aws_key_pair.eks.key_name

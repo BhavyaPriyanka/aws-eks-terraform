@@ -10,7 +10,7 @@ module "eks" {
   cluster_name    = "${var.project_name}-${var.environment}"
   cluster_version = "1.32"
 
-  cluster_endpoint_public_access = true
+  cluster_endpoint_public_access  = true
   cluster_endpoint_private_access = false
 
   authentication_mode = "API_AND_CONFIG_MAP"
@@ -89,7 +89,7 @@ module "eks" {
       }
 
       iam_role_additional_policies = {
-        AmazonEBSCSIDriverPolicy       = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
         # ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
       }
     }
@@ -110,52 +110,52 @@ module "eks" {
       }
 
       iam_role_additional_policies = {
-        AmazonEBSCSIDriverPolicy       = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
         # ElasticLoadBalancingFullAccess = "arn:aws:iam::aws:policy/service-role/ElasticLoadBalancingFullAccess"
       }
     }
 
-#     database = {
-#       min_size     = 1
-#       max_size     = 3
-#       desired_size = 1
+    #     database = {
+    #       min_size     = 1
+    #       max_size     = 3
+    #       desired_size = 1
 
-#       instance_types = ["m6i.large"]
-#       capacity_type  = "ON_DEMAND"
-#       version        = "1.32"
+    #       instance_types = ["m6i.large"]
+    #       capacity_type  = "ON_DEMAND"
+    #       version        = "1.32"
 
-#       key_name = aws_key_pair.eks.key_name
+    #       key_name = aws_key_pair.eks.key_name
 
-#       labels = {
-#         workload = "database"
-#       }
+    #       labels = {
+    #         workload = "database"
+    #       }
 
-#       iam_role_additional_policies = {
-#         AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-#         # AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/service-role/AmazonElasticFileSystemFullAccess"
-#       }
-#     }
+    #       iam_role_additional_policies = {
+    #         AmazonEBSCSIDriverPolicy          = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+    #         # AmazonElasticFileSystemFullAccess = "arn:aws:iam::aws:policy/service-role/AmazonElasticFileSystemFullAccess"
+    #       }
+    #     }
 
-#     monitoring = {
-#       min_size     = 1
-#       max_size     = 3
-#       desired_size = 1
+    #     monitoring = {
+    #       min_size     = 1
+    #       max_size     = 3
+    #       desired_size = 1
 
-#       instance_types = ["m6i.large"]
-#       capacity_type  = "ON_DEMAND"
-#       version        = "1.32"
+    #       instance_types = ["m6i.large"]
+    #       capacity_type  = "ON_DEMAND"
+    #       version        = "1.32"
 
-#       key_name = aws_key_pair.eks.key_name
+    #       key_name = aws_key_pair.eks.key_name
 
-#       labels = {
-#         workload = "monitoring"
-#       }
+    #       labels = {
+    #         workload = "monitoring"
+    #       }
 
-#       iam_role_additional_policies = {
-#         AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-#       }
-#     }
-#   }
+    #       iam_role_additional_policies = {
+    #         AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+    #       }
+    #     }
+    #   }
   }
   tags = var.common_tags
 
@@ -286,19 +286,43 @@ resource "helm_release" "cluster_autoscaler" {
   ]
 }
 
+# =========================================================
+# AWS Load Balancer Controller IAM Role
+# =========================================================
+
+module "load_balancer_controller_irsa_role" {
+
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
+  version = "~> 5.0"
+
+  role_name = "${var.project_name}-${var.environment}-load-balancer-controller"
+
+  attach_load_balancer_controller_targetgroup_binding_only_policy = true
+
+  oidc_providers = {
+
+    main = {
+
+      provider_arn = module.eks.oidc_provider_arn
+
+      namespace_service_accounts = [
+        "kube-system:aws-load-balancer-controller"
+      ]
+    }
+  }
+}
+
 
 # =========================================================
 # Bastion EKS Access Policy
 # =========================================================
 
 resource "aws_iam_policy" "bastion_eks_access" {
-
-  name        = "${var.project_name}-${var.environment}-bastion-eks-access"
-  description = "EKS API permissions for Bastion"
+  name = "localhelp-dev-bastion-eks-access"
 
   policy = jsonencode({
     Version = "2012-10-17"
-
     Statement = [
       {
         Effect = "Allow"
@@ -309,7 +333,9 @@ resource "aws_iam_policy" "bastion_eks_access" {
           "eks:DescribeAccessEntry",
           "eks:ListAccessEntries",
           "eks:ListAssociatedAccessPolicies",
-          "eks:AccessKubernetesApi"
+
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeLoadBalancers"
         ]
 
         Resource = "*"
@@ -318,9 +344,7 @@ resource "aws_iam_policy" "bastion_eks_access" {
   })
 }
 
-
 resource "aws_iam_role_policy_attachment" "bastion_eks_access" {
-
   role       = data.aws_iam_role.bastion.name
   policy_arn = aws_iam_policy.bastion_eks_access.arn
 }

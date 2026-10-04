@@ -40,6 +40,16 @@ provider "helm" {
         "--region",
         "us-east-1"
       ]
+
+      registries = [
+  {
+    url      = "oci://837206354502.dkr.ecr.us-east-1.amazonaws.com"
+    username = data.aws_ecr_authorization_token.platform.user_name
+    password = data.aws_ecr_authorization_token.platform.password
+  }
+]
     }
   }
 }
+
+data "aws_ecr_authorization_token" "platform" {}

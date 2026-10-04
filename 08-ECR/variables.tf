@@ -8,8 +8,8 @@ variable "environment" {
 
 variable "common_tags" {
   default = {
-    Project = "localhelp"
+    Project     = "localhelp"
     Environment = "dev"
-    Terraform = "true"
+    Terraform   = "true"
   }
 }

@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region where infrastructure will be deployed"
   type        = string
-  default     = "ap-south-1"
+  default     = "us-east-1"
 }
 
 variable "common_tags" {

@@ -17,7 +17,7 @@ module "db" {
 
 
   # DB subnet group
- db_subnet_group_name             = data.aws_ssm_parameter.db_subnet_group_name.value
+  db_subnet_group_name = data.aws_ssm_parameter.db_subnet_group_name.value
 
   # DB parameter group
   family = "mysql8.0"
@@ -33,7 +33,8 @@ module "db" {
   )
   manage_master_user_password = true
   #master_password = var.password
-  skip_final_snapshot = true
+ skip_final_snapshot = false
+ final_snapshot_identifier = "${var.project_name}-${var.environment}-final"
 
   parameters = [
     {

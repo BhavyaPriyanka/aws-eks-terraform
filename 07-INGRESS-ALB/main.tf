@@ -1,9 +1,9 @@
 resource "aws_lb" "ingress_alb" {
   name               = "${var.project_name}-${var.environment}-ingress-alb"
-  internal           = false 
+  internal           = false
   load_balancer_type = "application"
   security_groups    = [data.aws_ssm_parameter.ingress_sg_id.value]
-  subnets            = split(",",data.aws_ssm_parameter.public_subnet_ids.value)
+  subnets            = split(",", data.aws_ssm_parameter.public_subnet_ids.value)
 
   enable_deletion_protection = false
 
@@ -11,7 +11,7 @@ resource "aws_lb" "ingress_alb" {
   tags = merge(
     var.common_tags,
     {
-        Name = "${var.project_name}-${var.environment}-ingress-alb"
+      Name = "${var.project_name}-${var.environment}-ingress-alb"
 
     }
 
@@ -34,16 +34,16 @@ resource "aws_lb_listener" "http" {
     }
   }
 
-  
+
 }
 
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.ingress_alb.arn
   port              = "443"
 
-  protocol          = "HTTPS"
-  certificate_arn   = data.aws_ssm_parameter.acm_certificate_arn.value
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  protocol        = "HTTPS"
+  certificate_arn = data.aws_ssm_parameter.acm_certificate_arn.value
+  ssl_policy      = "ELBSecurityPolicy-2016-08"
 
   default_action {
     type = "fixed-response"
@@ -57,11 +57,11 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name     = "${var.project_name}-${var.environment}-frontend"
-  port     = 8080
-  protocol = "HTTP"
+  name        = "${var.project_name}-${var.environment}-frontend"
+  port        = 8080
+  protocol    = "HTTP"
   target_type = "ip"
-  vpc_id   = data.aws_ssm_parameter.vpc_id.value
+  vpc_id      = data.aws_ssm_parameter.vpc_id.value
   health_check {
     path                = "/"
     port                = 8080
@@ -97,8 +97,8 @@ module "route53" {
 
   records = {
     app = {
-      name    = "localhelp-${var.environment}"
-      type    = "A"
+      name            = "localhelp-${var.environment}"
+      type            = "A"
       allow_overwrite = true
 
       alias = {

@@ -5,7 +5,7 @@ resource "aws_acm_certificate" "localhelp" {
   tags = merge(
     var.common_tags,
     {
-        Name = "${var.project_name}-${var.environment}"
+      Name = "${var.project_name}-${var.environment}"
     }
   )
 }

@@ -12,7 +12,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "localhelp-remote-tfstate"
+  bucket        = "localhelp-remote-tfstate"
   force_destroy = false
 }
 

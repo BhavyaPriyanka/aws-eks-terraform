@@ -1,13 +1,26 @@
+
 #!/bin/bash
 
-set -e
+set -Eeuo pipefail
 
 CLUSTER_NAME="devops-lab"
 REGION="us-east-1"
+AWS_ACCOUNT_ID="837206354502"
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 
 echo "======================================"
-echo "Installing AWS Load Balancer Controller"
+echo "Preparing AWS and EKS authentication"
 echo "======================================"
+
+# Refresh AWS credentials if using an expiring assumed role,
+# SSO session, or other temporary credential source.
+aws sts get-caller-identity
+
+echo "Authenticating Docker with private ECR..."
+aws ecr get-login-password --region "$REGION" \
+  | docker login \
+      --username AWS \
+      --password-stdin "$ECR_REGISTRY"
 
 echo "Updating kubeconfig..."
 aws eks update-kubeconfig \
@@ -15,7 +28,7 @@ aws eks update-kubeconfig \
   --name "$CLUSTER_NAME"
 
 echo "Adding EKS Helm repository..."
-helm repo add eks https://aws.github.io/eks-charts
+helm repo add eks https://aws.github.io/eks-charts --force-update
 helm repo update
 
 echo "Installing AWS Load Balancer Controller..."
@@ -37,5 +50,6 @@ kubectl get crd targetgroupbindings.elbv2.k8s.aws
 
 echo
 echo "======================================"
-echo "AWS Load Balancer Controller READY"
+echo "AWS LOAD BALANCER CONTROLLER READY"
+echo "ECR authentication refreshed"
 echo "======================================"

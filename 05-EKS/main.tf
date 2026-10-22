@@ -52,23 +52,23 @@ module "eks" {
   # EKS Addons
   # -------------------------------------------------------
 
- cluster_addons = {
-  coredns = {}
+  cluster_addons = {
+    coredns = {}
 
-  eks-pod-identity-agent = {
-    addon_version = "v1.4.0-eksbuild.3"
+    eks-pod-identity-agent = {
+      addon_version = "v1.4.0-eksbuild.3"
+    }
+
+    kube-proxy = {}
+
+    vpc-cni = {
+      addon_version = "v1.23.2-eksbuild.1"
+    }
+
+    aws-ebs-csi-driver = {
+      addon_version = "v1.66.0-eksbuild.1"
+    }
   }
-
-  kube-proxy = {}
-
-  vpc-cni = {
-    addon_version = "v1.23.2-eksbuild.1"
-  }
-
-  aws-ebs-csi-driver = {
-    addon_version = "v1.66.0-eksbuild.1"
-  }
-}
 
   # -------------------------------------------------------
   # Managed Node Group Defaults
@@ -147,27 +147,27 @@ module "eks" {
     #       }
     #     }
 
-        monitoring = {
-          min_size     = 1
-          max_size     = 2
-          desired_size = 1
+    monitoring = {
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
 
-          instance_types = ["t3.medium"]
-          capacity_type  = "SPOT"
-          version        = "1.32"
+      instance_types = ["t3.medium"]
+      capacity_type  = "SPOT"
+      version        = "1.32"
 
-          key_name = aws_key_pair.eks.key_name
+      key_name = aws_key_pair.eks.key_name
 
-          labels = {
-            workload = "monitoring"
-          }
-
-          iam_role_additional_policies = {
-            AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-          }
-        }
+      labels = {
+        workload = "monitoring"
       }
-  
+
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      }
+    }
+  }
+
   tags = var.common_tags
 
 }
@@ -260,8 +260,8 @@ resource "helm_release" "cluster_autoscaler" {
   namespace = "kube-system"
 
   repository = "oci://837206354502.dkr.ecr.us-east-1.amazonaws.com/localhelp-platform"
-  chart   = "cluster-autoscaler"
-  version = "9.59.0"
+  chart      = "cluster-autoscaler"
+  version    = "9.59.0"
 
   set = [
 

@@ -261,7 +261,7 @@ resource "helm_release" "cluster_autoscaler" {
 
   repository = "oci://837206354502.dkr.ecr.us-east-1.amazonaws.com/localhelp-platform"
   chart      = "cluster-autoscaler"
-  version    = "9.59.0"
+  version    = "9.45.0"
 
   set = [
 

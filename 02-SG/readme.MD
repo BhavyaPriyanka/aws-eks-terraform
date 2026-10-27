@@ -4,6 +4,9 @@
 
 This module creates security groups for Localhelp's database, EKS control plane, EKS worker nodes, ingress ALB, bastion host, and VPN. It uses a reusable security-group module from GitHub and adds ingress rules to control which resources can communicate with each other.
 
+# Reusable Security Group Module
+This resource creates a reusable AWS security group using the provided VPC ID, name, and description. The dynamic "ingress" block generates inbound rules from var.inbound_rules, while dynamic "egress" generates outbound rules from var.outbound_rules; each rule defines source/destination ports, protocol, and CIDR blocks. The merge() function combines common tags, security-group-specific tags, and a standard resource name. This module is called by 02-SG for the DB, EKS cluster, worker nodes, ingress, bastion, and VPN security groups, avoiding duplicated resource definitions. Note: The rules shown support CIDR-based access only; they do not handle source_security_group_id rules used in your 02-SG configuration, so check whether those rules are created separately or supported elsewhere in the module.
+
 ## 2. Security Groups
 
 - DB: Allows MySQL connections on port `3306` from the bastion, EKS nodes, and Jenkins agent security group.

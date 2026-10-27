@@ -20,7 +20,7 @@ The application uses `appdb` as its database schema to store Localhelp applicati
 
 ## 3. Networking and Security
 
-The module retrieves `db_sg_id` and `db_subnet_group_name` from AWS Systems Manager Parameter Store. The security group controls which resources can connect to MySQL, while the DB subnet group determines which subnets RDS can use. Based on the previous security-group configuration, access is permitted from the EKS nodes, bastion host, and Jenkins agent security group on port `3306`.
+The module retrieves `db_sg_id` and `db_subnet_group_name` from AWS Systems Manager Parameter Store. The security group controls which resources can connect to MySQL, while the DB subnet group determines which subnets RDS can use.  Access is permitted from the EKS nodes, bastion host, and Jenkins agent security group on port `3306`.
 
 ## 4. Database Credentials
 

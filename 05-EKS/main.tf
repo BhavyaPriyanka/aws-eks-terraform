@@ -308,7 +308,7 @@ module "load_balancer_controller_irsa_role" {
 
   role_name = "${var.project_name}-${var.environment}-load-balancer-controller"
 
-  attach_load_balancer_controller_targetgroup_binding_only_policy = true
+  attach_load_balancer_controller_policy = true
 
   oidc_providers = {
 
@@ -357,4 +357,41 @@ resource "aws_iam_policy" "bastion_eks_access" {
 resource "aws_iam_role_policy_attachment" "bastion_eks_access" {
   role       = data.aws_iam_role.bastion.name
   policy_arn = aws_iam_policy.bastion_eks_access.arn
+}
+
+# =========================================================
+# AWS Load Balancer Controller Helm Release
+# =========================================================
+
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  version    = "1.14.0"
+
+  values = [
+    yamlencode({
+      clusterName = module.eks.cluster_name
+      region      = "us-east-1"
+      vpcId = local.vpc_id
+
+      serviceAccount = {
+        create = true
+        name   = "aws-load-balancer-controller"
+
+        annotations = {
+          "eks.amazonaws.com/role-arn" = module.load_balancer_controller_irsa_role.iam_role_arn
+        }
+      }
+    })
+  ]
+
+  wait    = true
+  timeout = 600
+
+  depends_on = [
+    module.eks,
+    module.load_balancer_controller_irsa_role
+  ]
 }

@@ -43,16 +43,7 @@ The data sources retrieve available AZs and details about the default VPC and it
 
 The root module stores the VPC ID, public subnet IDs, private subnet IDs, and DB subnet group name in SSM under paths such as `/localhelp/dev/vpc_id`. Other modules can retrieve these values instead of hardcoding IDs.
 
-## 3. Important configuration issues to fix
-
-1. Subnet association counts: All three route table associations use `length(var.private_subnet_cidrs)`. Use the matching list for each type: public, private, or database. The current configuration works only when the counts align.
-2. Database routing: The database route table sends `0.0.0.0/0` through the NAT Gateway. If your RDS databases do not need outbound internet access, consider removing that default route.
-3. NAT availability: One NAT Gateway serves both AZs. This saves cost, but a failure or outage in its AZ can affect outbound connectivity from private subnets in both AZs.
-4. VPC peering: `is_peering_required` is passed to the module, but the provided code does not show any `aws_vpc_peering_connection` resource or conditional peering logic. The variable alone does not create peering.
-5. SSM parameter types: `StringList` is appropriate for comma-separated subnet IDs. Confirm the consuming modules split or parse the returned value as needed.
-6. Git source version: `?ref=main` tracks the main branch. Pin a release tag or commit SHA for reproducible deployments.
-
-## 4. Network layout
+## 3. Network layout
 
 | Resource         | CIDR / configuration           | Purpose                               |
 | ---------------- | ------------------------------ | ------------------------------------- |

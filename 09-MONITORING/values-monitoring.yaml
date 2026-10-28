@@ -1,4 +1,15 @@
 prometheus:
+  ingress:
+    enabled: true
+    ingressClassName: alb
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+    hosts:
+      - prometheus.localhelp.store
+    paths:
+      - /
+    pathType: Prefix
   prometheusSpec:
     retention: 15d
     nodeSelector:

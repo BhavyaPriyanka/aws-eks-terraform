@@ -7,3 +7,9 @@ variable "ecr_registry" {
   type    = string
   default = "837206354502.dkr.ecr.us-east-1.amazonaws.com"
 }
+
+variable "zone_name"{
+  type = string
+  default = "localhelp.store"
+}
+

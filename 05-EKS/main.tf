@@ -374,7 +374,7 @@ resource "helm_release" "aws_load_balancer_controller" {
     yamlencode({
       clusterName = module.eks.cluster_name
       region      = "us-east-1"
-      vpcId = local.vpc_id
+      vpcId       = local.vpc_id
 
       serviceAccount = {
         create = true
@@ -395,3 +395,52 @@ resource "helm_release" "aws_load_balancer_controller" {
     module.load_balancer_controller_irsa_role
   ]
 }
+# =========================================================
+# External Secrets Operator - Secrets Manager Policy
+# =========================================================
+
+resource "aws_iam_policy" "external_secrets" {
+  name        = "${var.project_name}-${var.environment}-external-secrets"
+  description = "Read the Localhelp RDS secret for External Secrets Operator"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "arn:aws:secretsmanager:us-east-1:837206354502:secret:rds!db-eb2a8187-301c-4065-bac6-b1711abea23c-XPUcMt"
+      }
+    ]
+  })
+}
+
+
+# =========================================================
+# External Secrets Operator - IRSA Role
+# =========================================================
+
+module "external_secrets_irsa_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name = "${var.project_name}-${var.environment}-external-secrets"
+
+  role_policy_arns = {
+    external_secrets = aws_iam_policy.external_secrets.arn
+  }
+
+  oidc_providers = {
+    main = {
+      provider_arn = module.eks.oidc_provider_arn
+
+      namespace_service_accounts = [
+        "external-secrets:external-secrets"
+      ]
+    }
+  }
+}
+

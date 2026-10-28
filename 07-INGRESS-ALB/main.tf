@@ -106,6 +106,102 @@ module "route53" {
         zone_id = aws_lb.ingress_alb.zone_id
       }
     }
+
+     prometheus = {
+    name            = "prometheus"
+    type            = "A"
+    allow_overwrite = true
+
+    alias = {
+      name    = aws_lb.ingress_alb.dns_name
+      zone_id = aws_lb.ingress_alb.zone_id
+    }
+  }
+
+  grafana = {
+  name            = "grafana"
+  type            = "A"
+  allow_overwrite = true
+
+  alias = {
+    name    = aws_lb.ingress_alb.dns_name
+    zone_id = aws_lb.ingress_alb.zone_id
+  }
+}
+  }
+}
+
+resource "aws_lb_target_group" "prometheus" {
+  name        = "${var.project_name}-${var.environment}-prometheus"
+  port        = 9090
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = data.aws_ssm_parameter.vpc_id.value
+
+  health_check {
+    path                = "/-/healthy"
+    port                = "9090"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200"
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-prometheus"
+  })
+}
+
+resource "aws_lb_listener_rule" "prometheus" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 110
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.prometheus.arn
+  }
+
+  condition {
+    host_header {
+      values = ["prometheus.${var.zone_name}"]
+    }
+  }
+}
+
+resource "aws_lb_target_group" "grafana" {
+  name        = "${var.project_name}-${var.environment}-grafana"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = data.aws_ssm_parameter.vpc_id.value
+
+  health_check {
+    path                = "/api/health"
+    port                = "80"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200"
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "${var.project_name}-${var.environment}-grafana"
+  })
+}
+
+resource "aws_lb_listener_rule" "grafana" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 120
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.grafana.arn
+  }
+
+  condition {
+    host_header {
+      values = ["grafana.${var.zone_name}"]
+    }
   }
 }
 
